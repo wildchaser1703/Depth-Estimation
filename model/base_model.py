@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 
 from .utils.summary import summary as model_summary
-from tensornet.engine.learner import Learner
 
 
 class BaseModel(nn.Module):
@@ -11,13 +10,13 @@ class BaseModel(nn.Module):
         """This function instantiates all the model layers."""
         super(BaseModel, self).__init__()
         self.learner = None
-    
+
     def forward(self, x):
         """This function defines the forward pass of the model.
 
         Args:
             x: Input.
-        
+
         Returns:
             Model output.
         """
@@ -30,11 +29,20 @@ class BaseModel(nn.Module):
             input_size (tuple): Size of input to the model.
         """
         model_summary(self, input_size)
-    
+
     def create_learner(
-        self, train_loader, optimizer, criterion, device='cpu',
-        epochs=1, l1_factor=0.0, val_loader=None, callbacks=None, metrics=None,
-        activate_loss_logits=False, record_train=True
+        self,
+        train_loader,
+        optimizer,
+        criterion,
+        device="cpu",
+        epochs=1,
+        l1_factor=0.0,
+        val_loader=None,
+        callbacks=None,
+        metrics=None,
+        activate_loss_logits=False,
+        record_train=True,
     ):
         """Create Learner object.
 
@@ -56,13 +64,23 @@ class BaseModel(nn.Module):
             metrics (list of str, optional): List of names of the metrics for model
                 evaluation. (default: None)
         """
+        from tensornet.engine.learner import Learner
+
         self.learner = Learner(
-            train_loader, optimizer, criterion, device=device, epochs=epochs,
-            val_loader=val_loader, l1_factor=l1_factor, callbacks=callbacks, metrics=metrics,
-            activate_loss_logits=activate_loss_logits, record_train=record_train
+            train_loader,
+            optimizer,
+            criterion,
+            device=device,
+            epochs=epochs,
+            val_loader=val_loader,
+            l1_factor=l1_factor,
+            callbacks=callbacks,
+            metrics=metrics,
+            activate_loss_logits=activate_loss_logits,
+            record_train=record_train,
         )
         self.learner.set_model(self)
-    
+
     def set_learner(self, learner):
         """Assign a learner object to the model.
 
@@ -82,12 +100,12 @@ class BaseModel(nn.Module):
 
         # Check learner
         if self.learner is None:
-            print('Creating a learner object.')
+            print("Creating a learner object.")
             self.create_learner(*args, **kwargs)
-        
+
         # Train Model
         self.learner.fit(start_epoch=start_epoch)
-    
+
     def save(self, filepath, **kwargs):
         """Save the model.
 
@@ -96,25 +114,26 @@ class BaseModel(nn.Module):
             **kwargs (optional): Additional parameters to save with the model.
         """
         if self.learner is None:
-            raise ValueError('Cannot save un-trained model.')
+            raise ValueError("Cannot save un-trained model.")
 
-        torch.save({
-            'model_state_dict': self.state_dict(),
-            'optimizer_state_dict': self.learner.optimizer.state_dict(),
-            **kwargs
-        }, filepath)
-    
+        torch.save(
+            {
+                "model_state_dict": self.state_dict(),
+                "optimizer_state_dict": self.learner.optimizer.state_dict(),
+                **kwargs,
+            },
+            filepath,
+        )
+
     def load(self, filepath):
         """Load the model.
 
         Args:
             filepath (str): File in which the model is be saved.
-        
+
         Returns:
             Parameters saved inside the checkpoint file.
         """
-        checkpoint = torch.load(filepath)
-        self.load_state_dict(checkpoint['model_state_dict'])
-        return {
-            k: v for k, v in checkpoint.items() if k != 'model_state_dict'
-        }
+        checkpoint = torch.load(filepath, map_location="cpu", weights_only=True)
+        self.load_state_dict(checkpoint["model_state_dict"])
+        return {k: v for k, v in checkpoint.items() if k != "model_state_dict"}

@@ -42,7 +42,7 @@ def rmse_loss(smooth=1e-6):
     Returns:
         Root mean squared error loss function
     """
-    return RMSELoss(smooth=1e-6)
+    return RMSELoss(smooth=smooth)
 
 
 def ssim_loss(data_range=1.0, size_average=True, channel=1):
@@ -58,9 +58,7 @@ def ssim_loss(data_range=1.0, size_average=True, channel=1):
     Returns:
         SSIM loss function
     """
-    return SSIMLoss(
-        data_range=data_range, size_average=size_average, channel=channel
-    )
+    return SSIMLoss(data_range=data_range, size_average=size_average, channel=channel)
 
 
 def ms_ssim_loss(data_range=1.0, size_average=True, channel=1):
@@ -76,9 +74,7 @@ def ms_ssim_loss(data_range=1.0, size_average=True, channel=1):
     Returns:
         MS-SSIM loss function
     """
-    return MSSSIMLoss(
-        data_range=data_range, size_average=size_average, channel=channel
-    )
+    return MSSSIMLoss(data_range=data_range, size_average=size_average, channel=channel)
 
 
 def dice_loss(smooth=1):
@@ -89,7 +85,7 @@ def dice_loss(smooth=1):
             smooth value (also known as Laplace smooth, or
             Additive smooth) can be used to avoid overfitting.
             (default: 1)
-    
+
     Returns:
         Dice loss function
     """
@@ -101,7 +97,7 @@ def bce_dice_loss(smooth=1e-6):
 
     Args:
         smooth (float, optional): Smoothing value.
-    
+
     Returns:
         BCEDice loss function
     """

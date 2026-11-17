@@ -11,22 +11,16 @@ class DoubleConvBlock(BaseModel):
         super(DoubleConvBlock, self).__init__()
 
         self.conv1 = nn.Sequential(
-            nn.Conv2d(
-                in_channels, out_channels,
-                kernel_size=3, padding=1
-            ),
+            nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
             nn.ReLU(),
             nn.BatchNorm2d(out_channels),
         )
         self.conv2 = nn.Sequential(
-            nn.Conv2d(
-                out_channels, out_channels,
-                kernel_size=3, padding=1
-            ),
+            nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1),
             nn.ReLU(),
             nn.BatchNorm2d(out_channels),
         )
-    
+
     def forward(self, x):
         out = self.conv1(x)
         out = self.conv2(out)
@@ -38,14 +32,10 @@ class ResEncoderBlock(BaseModel):
     def __init__(self, in_channels, out_channels):
         super(ResEncoderBlock, self).__init__()
 
-        self.double_conv = DoubleConvBlock(
-            in_channels, out_channels
-        )
-        self.skip_conv = nn.Conv2d(
-            in_channels, out_channels, kernel_size=1
-        )
+        self.double_conv = DoubleConvBlock(in_channels, out_channels)
+        self.skip_conv = nn.Conv2d(in_channels, out_channels, kernel_size=1)
         self.down = nn.MaxPool2d(2)
-    
+
     def forward(self, x):
         identity = self.skip_conv(x)
         out = self.double_conv(x)
@@ -59,32 +49,18 @@ class ResDecoderBlock(BaseModel):
         super(ResDecoderBlock, self).__init__()
 
         self.transition_conv = nn.Sequential(
-            nn.Conv2d(
-                in_channels=in_channels,
-                out_channels=out_channels,
-                kernel_size=1
-            )
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1)
         )
-        self.enc_skip_conv = nn.Conv2d(
-            in_channels, out_channels, kernel_size=1
-        )
-        self.skip_conv = nn.Conv2d(
-            in_channels, out_channels, kernel_size=1
-        )
-        self.double_conv = DoubleConvBlock(
-            in_channels, out_channels
-        )
+        self.enc_skip_conv = nn.Conv2d(in_channels, out_channels, kernel_size=1)
+        self.skip_conv = nn.Conv2d(in_channels, out_channels, kernel_size=1)
+        self.double_conv = DoubleConvBlock(in_channels, out_channels)
 
     def forward(self, x, encoder_input, skip_input=None):
         # Transition
         x = self.transition_conv(x)
-        x = F.interpolate(
-            x, scale_factor=2, mode='bilinear', align_corners=False
-        )
+        x = F.interpolate(x, scale_factor=2, mode="bilinear", align_corners=False)
         if not skip_input is None:
-            encoder_input = torch.cat(
-                [encoder_input, skip_input], dim=1
-            )
+            encoder_input = torch.cat([encoder_input, skip_input], dim=1)
             encoder_input = self.enc_skip_conv(encoder_input)
         x = torch.cat([x, encoder_input], dim=1)
 
@@ -140,12 +116,21 @@ class DSResNet(BaseModel):
         self.D0 = nn.Conv2d(16, 1, kernel_size=1)
 
     def forward(self, x):
+        if not isinstance(x, dict) or not {"bg", "bg_fg"} <= x.keys():
+            raise ValueError("Provide bg and bg_fg tensors")
+        bg, composite = x["bg"], x["bg_fg"]
+        if bg.ndim != 4 or bg.shape != composite.shape or bg.shape[1] != 3:
+            raise ValueError(
+                "Inputs must have matching NCHW shapes with three channels"
+            )
+        if min(bg.shape[-2:]) < 64 or any(size % 32 for size in bg.shape[-2:]):
+            raise ValueError("Height/width must be multiples of 32 and at least 64")
         # bg
-        b1_down, b1 = self.b1(x['bg'])
+        b1_down, b1 = self.b1(x["bg"])
         b2_down, b2 = self.b2(b1_down)
 
         # bg_fg
-        bf1_down, bf1 = self.bf1(x['bg_fg'])
+        bf1_down, bf1 = self.bf1(x["bg_fg"])
         bf2_down, bf2 = self.bf2(bf1_down)
 
         # Merging
